@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+.env
+*.log
+# The challenge brief is confidential; keep it out of the repo.
+*.pdf
