@@ -1,0 +1,46 @@
+/* Deliberately plain: the real look and feel is still being designed. All theming lives in these tokens. */
+:root {
+  --bg: #fafafa;
+  --fg: #1d1d1f;
+  --muted: #6b6b70;
+  --accent: #0b5cff;
+  --border: #e3e3e8;
+  --error: #c62828;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 0.55rem 1rem; cursor: pointer; font: inherit; }
+button.secondary { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+button:disabled { opacity: 0.6; cursor: default; }
+input, textarea { font: inherit; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; width: 100%; }
+
+.header { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: 1rem; border-bottom: 1px solid var(--border); background: #fff; flex-wrap: wrap; }
+.brand { font-weight: 700; font-size: 1.25rem; }
+.search { display: flex; gap: 0.5rem; flex: 1; max-width: 480px; }
+.cats { display: flex; gap: 1rem; padding: 0.75rem 1rem; overflow-x: auto; background: #fff; border-bottom: 1px solid var(--border); text-transform: capitalize; }
+.cats a.active { color: var(--accent); font-weight: 600; }
+.main { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+.tile { display: flex; flex-direction: column; gap: 0.5rem; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem; }
+.tile:hover { border-color: var(--accent); }
+.tile img { width: 100%; height: 160px; object-fit: contain; }
+.tile-title { font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile-meta { color: var(--muted); font-size: 0.85rem; }
+
+.product { display: grid; grid-template-columns: minmax(200px, 360px) 1fr; gap: 2rem; }
+.product img { width: 100%; max-height: 400px; object-fit: contain; background: #fff; border-radius: 10px; padding: 1rem; }
+.price { font-size: 1.5rem; font-weight: 700; }
+@media (max-width: 700px) { .product { grid-template-columns: 1fr; } }
+
+.enquiry { display: grid; gap: 0.75rem; margin-top: 1rem; max-width: 460px; }
+.enquiry label { display: grid; gap: 0.25rem; }
+.actions { display: flex; gap: 0.5rem; }
+.thanks { margin-top: 1rem; padding: 1rem; background: #e8f5e9; border-radius: 10px; }
+.muted { color: var(--muted); }
+.error { color: var(--error); font-size: 0.9rem; }
+.capitalize { text-transform: capitalize; }
