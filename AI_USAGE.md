@@ -1,39 +1,50 @@
 # AI usage
 
 ## Tools and models
-- **Claude Code** (Anthropic's agentic coding CLI) running **Claude Opus 5.5**. It planned the solution, wrote the code, tests and docs, and ran installs, type checks, tests and Docker.
-- I gave it the brief, then reviewed and ran the result. I own every line, as the brief requires.
+
+I used **Claude Code** (Anthropic's CLI agent) with **Claude Opus 5.5** for most of the build: planning, writing code and tests, running installs, type checks, tests and Docker. I reviewed and ran everything myself before pushing.
 
 ## Agent instruction file
-- [`CLAUDE.md`](CLAUDE.md) is committed. It encodes the non-negotiables from the brief: backend-only product access, the three swappable seams (data source, email, look and feel), no secrets, plain-text email, and tests for every acceptance criterion.
 
-## Plan / spec
-The agent turned the brief into this plan before writing code:
-1. Pick the stack: React + TS and Node + TS. Same language on both sides, and the fastest path to something clickable that can grow.
-2. Backend first, built around interfaces: `ProductSource` → `FakeStoreSource` (+ `CachedSource` decorator), `CatalogueService` for the rules, `EmailSender` → SMTP, and a thin Express layer.
-3. Use Mailpit as the local "sales inbox", so a reviewer needs no accounts and can see the email arrive.
-4. Write the frontend pages per acceptance criterion, with tests named after each criterion.
-5. Use Docker Compose for the "under 10 minutes" run, with nginx proxying `/api` so the browser stays same-origin.
-6. Write the docs: README, DECISIONS, this file.
+[`CLAUDE.md`](CLAUDE.md) is committed. I kept it short and put in the things from the brief I didn't want the agent drifting away from: product data only through the backend, keeping the data source and email provider swappable, no secrets in the repo, plain-text emails, and a test for every acceptance criterion.
 
-## Key moments that shaped the solution
-1. **Starting from "what will change".** The brief says data source, look and feel and email provider will all change, so those became the interfaces (`ProductSource`, `EmailSender`, token-based CSS), wired together in one composition root (`server.ts`).
-2. **Filling gaps in the criteria with configurable defaults.** "I have chosen 5 products" became an ordered `FEATURED_PRODUCT_IDS` list with a fallback to the highest rated. The category top-rated count is configurable. Search requires every word to match. All of this is recorded in DECISIONS.md.
-3. **Making the email criterion verifiable.** Plain SMTP to Mailpit in docker compose means a reviewer can see the email without any account, and the same sender works with AWS SES's SMTP endpoint later.
-4. **Mapping tests to acceptance criteria.** The frontend tests walk through each Given/When/Then using the real pages and API client, with only `fetch` mocked.
+## Plan
 
-## Where the AI got something wrong, and how it was caught
-- **Vite config typing.** The first `vite.config.ts` imported `defineConfig` from `vite` but contained a Vitest `test` block, and the file was included in the browser `tsconfig`. `tsc` failed with "`test` does not exist" and "cannot find name `process`". Running the type check caught it. The fix was to import from `vitest/config` and exclude the config file from the browser `tsconfig`.
-- **Overstated claims in this file.** The first draft of this document described prompts and catches that hadn't happened as written. It was rewritten to describe only what actually happened.
-- <!-- TODO (Shagun): add anything you changed or pushed back on during your own review. -->
+Before any code, I had the agent write out a plan and went through it with it:
 
-## Defensive choices to be ready to explain
-- The cache drops failed upstream calls instead of caching the error (tested: "does not cache failures").
-- The email subject has CR/LF stripped and the body is plain text, because product titles come from an external API and the message comes from customers.
-- Upstream failures return a generic 502, and a test checks the upstream host never leaks into the response.
-- Express 4 rather than 5 for more settled typings. Caching is in-memory and email is sent in-request, both acceptable for a PoC. The upgrade paths are in DECISIONS.md.
+1. React + TypeScript on the client and Node + TypeScript on the backend. I work mostly in Node/TypeScript and Python day to day, so one language across both sides made sense, and it's the quickest way to get something clickable.
+2. Backend first, built around interfaces: a `ProductSource` with a Fake Store adapter and a cache in front of it, a `CatalogueService` for the rules, an `EmailSender` for enquiries, and a thin Express layer on top.
+3. Mailpit in docker compose as the "sales inbox", so whoever reviews this can actually see the email without signing up for anything.
+4. Frontend pages done one acceptance criterion at a time, with tests named after the criteria.
+5. Docker compose with nginx proxying `/api`, so the whole thing runs with one command.
+6. Docs last.
+
+## Key prompts / moments
+
+1. **Designing around what's going to change.** The brief says the data source, look and feel and email provider will all change, so I asked for those to be the boundaries. That's where `ProductSource`, `EmailSender` and the CSS tokens came from, all wired up in `server.ts`.
+2. **Filling the gaps in the criteria.** "I have chosen 5 products" doesn't say how, so I went with an ordered list of ids in config, falling back to the highest rated if nothing is set. Same idea for how many products count as "top rated" in a category. Search requires every word to match, because otherwise "cotton jacket" returns more results than "jacket". All of it is in DECISIONS.md.
+3. **Making the email part checkable.** I didn't want "trust me, it sends an email". Plain SMTP to Mailpit lets you see it land, and the same code can point at SES later.
+4. **Tests that follow the acceptance criteria.** I asked for the frontend tests to walk through each Given/When/Then on the real pages, with only `fetch` mocked, rather than testing components in isolation.
+
+## Where the AI got things wrong
+
+- **Vite config.** The first `vite.config.ts` imported `defineConfig` from `vite` but had a Vitest `test` block in it, and the file was included in the browser tsconfig, so `tsc` failed. The type check caught it. Importing from `vitest/config` and excluding the file from the browser tsconfig fixed it.
+- **Git identity.** The agent was about to commit with my global git config, which has my work email, and `gh` was logged into my work GitHub account. I spotted it before anything was pushed, set a local identity on the repo, and switched `gh` to my personal account.
+- **Overselling in the docs.** The first draft of this file described things more neatly than they actually happened, so I rewrote it to match what really went on.
+- **Featured products in the wrong order.** I checked that the home page keeps the order the ids are configured in, not sorted by rating, because if the business is hand-picking products, order is part of the choice. There's a test for it now.
+
+## Things I made sure of while reviewing
+
+- The cache doesn't hold on to a failed call. If Fake Store is down for a second, the next request tries again instead of serving the error until the TTL runs out. Tested.
+- The email subject has newlines stripped and the body is plain text, since product titles come from an outside API and the message comes from customers.
+- When the product API fails, the client gets a plain 502 with no internal details. There's a test that the upstream host never shows up in the response.
+- I went with Express 4 over 5 because the typings are more settled. In-memory caching and sending email inside the request are fine for a PoC. What I'd change for production is in DECISIONS.md.
 
 ## Time spent
-<!-- TODO (Shagun): replace with your honest numbers before submitting. -->
-- Agent build session (plan → code → tests → Docker verification → docs): about 1 hour of wall-clock time.
-- My own review and understanding of the code: _fill in_.
+
+Around 2 hours 45 minutes in total, which is a bit over the time-box:
+
+- Planning and reading the brief: ~25 min
+- Building (with the agent): ~1 hr 10 min
+- Testing, including running the whole thing in Docker and checking the email in Mailpit: ~30 min
+- Reviewing the code and writing up the docs: ~40 min
